@@ -15,14 +15,15 @@
             'max-w-[80%] rounded-lg p-3',
             message.isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'
           ]">
-            <div v-if="!message.isUser && message.type === 'project-types'" class="space-y-2">
-              <p>{{ message.content }}</p>
-              <div class="grid grid-cols-2 gap-2 mt-2">
+            <div v-if="!message.isUser && message.type === 'project-types'" class="space-y-6">
+              <p >{{ message.content }}</p>
+              <div class="flex flex-wrap gap-1.5 mt-1.5">
                 <Button 
                   v-for="type in projectTypes" 
                   :key="type.id" 
                   variant="secondary" 
-                  size="sm"
+                  size="xs"
+                    class="px-2 py-1 border"
                   @click="selectProjectType(type.id)"
                 >
                   {{ type.name }}
@@ -157,7 +158,7 @@
     { id: 'mern', name: 'MERN Stack' },
     { id: 'vue', name: 'Vue.js' },
     { id: 'react', name: 'React' },
-    { id: 'wordpress', name: 'WordPress' },
+    { id: 'wordpress', name: 'WordPress Plugin' },
     { id: 'laravel', name: 'Laravel' },
     { id: 'django', name: 'Django' }
   ];
