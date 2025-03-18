@@ -12,7 +12,7 @@
         <div v-for="(message, index) in messages" :key="index" 
              :class="['flex', message.isUser ? 'justify-end' : 'justify-start']">
           <div :class="[
-            'max-w-[80%] rounded-lg p-3',
+            'max-w-[80%] rounded-lg p-2',
             message.isUser ? 'bg-primary text-primary-foreground' : 'bg-muted'
           ]">
             <div v-if="!message.isUser && message.type === 'project-types'" class="space-y-6">
@@ -222,6 +222,8 @@
 
   // Add a new project details object that has more specific information
   const projectDetails = computed(() => {
+    console.log('Computing projectDetails with type:', selectedProjectType.value);
+    
     if (!selectedProjectType.value) return null;
     
     return {
@@ -234,6 +236,15 @@
 
   // Provide this computed property to child components
   provide('projectDetails', projectDetails);
+
+  // Add additional logging for debugging
+  watch(selectedProjectType, (newVal) => {
+    console.log('Selected project type changed:', newVal);
+  }, { immediate: true });
+
+  watch(userAnswers, (newVal) => {
+    console.log('User answers changed:', newVal);
+  }, { deep: true });
 
   const welcomeMessage = {
     content: "👋 What kind of project would you like to create?",
@@ -631,15 +642,22 @@
     return projectOutput.structure;
   };
   
-  const selectProjectType = (typeId: string) => {
+  const selectProjectType = async (typeId: string) => {
     const selectedType = projectTypes.find(type => type.id === typeId);
     
     if (selectedType) {
+      console.log('Setting selected project type to:', typeId);
       selectedProjectType.value = typeId;
+      currentStep.value = 'questions';  // Update step immediately
+      
+      // Update messages
       messages.value.push({
         content: `I want to create a ${selectedType.name} project`,
         isUser: true
       });
+      
+      // Add initial project info to answers
+      userAnswers.value = [`Creating a new ${selectedType.name} project`];
       
       // Add to chat history
       chatHistory.value.push({
@@ -647,30 +665,17 @@
         content: `I want to create a ${selectedType.name} project`
       });
       
-      // Simulate AI thinking
-      isTyping.value = true;
+      // Start questions immediately
+      messages.value.push({
+        content: `Great choice! To help me create the perfect ${selectedType.name} project for you, I need to ask you 5 quick questions. Let's start with the first one:`,
+        isUser: false
+      });
       
-      // Start the question sequence instead of generating right away
-      setTimeout(() => {
-        isTyping.value = false;
-        messages.value.push({
-          content: `Great choice! To help me create the perfect ${selectedType.name} project for you, I need to ask you 5 quick questions. Let's start with the first one:`,
-          isUser: false
-        });
-        
-        // Ask the first question
-        currentStep.value = 'questions';
-        currentQuestionIndex.value = 0;
-        userAnswers.value = []; // Reset answers
-        
-        // Add the first question
-        setTimeout(() => {
-          messages.value.push({
-            content: getNextQuestion(),
-            isUser: false
-          });
-        }, 500);
-      }, 1000);
+      // Add the first question immediately
+      messages.value.push({
+        content: getNextQuestion(),
+        isUser: false
+      });
     }
   };
   

@@ -5,7 +5,7 @@
     </div>
     
     <div class="p-3 space-y-3 overflow-y-auto flex-1">
-      <div v-if="!projectDetails">
+      <div v-if="!projectDetailsInjected?.value?.type">
         <p class="text-muted-foreground text-sm">
           Select a project type in the chat to see information here.
         </p>
@@ -14,11 +14,11 @@
       <div v-else>
         <div class="mb-3 flex items-center gap-2">
           <div class="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-            <component :is="getProjectIcon(projectDetails.type)" class="h-4 w-4 text-primary" />
+            <component :is="getProjectIcon(projectDetailsInjected.value.type)" class="h-4 w-4 text-primary" />
           </div>
           <div>
-            <h3 class="text-sm font-medium">{{ getProjectTypeName(projectDetails.type) }}</h3>
-            <p class="text-xs text-muted-foreground">{{ getProjectStatus(projectDetails.status) }}</p>
+            <h3 class="text-sm font-medium">{{ getProjectTypeName(projectDetailsInjected.value.type) }}</h3>
+            <p class="text-xs text-muted-foreground">{{ getProjectStatus(projectDetailsInjected.value.status) }}</p>
           </div>
         </div>
         
@@ -76,7 +76,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, computed, watch, inject } from 'vue';
+import { ref, computed, watch, inject, onMounted } from 'vue';
 import { Badge } from '@/components/ui/badge';
 import { Separator } from '@/components/ui/separator';
 import { Cloud, Server, Globe, Github, Code, Database, FileCode, Package, 
@@ -109,36 +109,50 @@ interface ProjectDetails {
 // Try to inject project data from parent component
 const injectedProjectType = inject<any>('selectedProjectType');
 const injectedUserAnswers = inject<any>('userAnswers');
-const projectDetails = inject<any>('projectDetails');
+const projectDetailsInjected = inject<any>('projectDetails');
 
-// Initialize current project data
+// Add debug logging
+onMounted(() => {
+  console.log('ProjectInfo mounted');
+  
+  // Use a watcher to log when the injected values change
+  watch(projectDetailsInjected, (newVal) => {
+    console.log('Project details changed:', newVal);
+  }, { deep: true });
+  
+  watch(injectedProjectType, (newVal) => {
+    console.log('Injected project type changed:', newVal);
+  });
+});
+
+// Initialize current project data with modified computation
 const currentProject = computed(() => {
-  if (!projectDetails?.value?.type) return { type: '', features: [], requirements: [] };
+  console.log('Computing currentProject with details:', projectDetailsInjected?.value);
   
-  const answers = projectDetails.value.answers || [];
+  if (!projectDetailsInjected?.value?.type) {
+    return { type: '', features: [], requirements: [] };
+  }
   
-  // Extract features from user answers (assuming second answer has features)
-  const features = answers.length > 1 
-    ? answers[1].split(',').map((f: string) => f.trim())
-    : [];
+  const answers = projectDetailsInjected.value.answers || [];
   
-  // Create requirements from user answers
-  const requirements = answers.map((answer: string, index: number) => {
-    // Skip the features answer since we're handling it separately
-    if (index === 1) return null;
-    
-    // Create a meaningful label based on question index
-    const prefix = index === 0 ? 'Purpose: ' : 
-                  index === 2 ? 'Auth: ' :
-                  index === 3 ? 'UI: ' : 'APIs: ';
-    
-    return prefix + answer;
-  }).filter(Boolean) as string[]; // Remove the null entry and typecast
+  // Always include initial requirement
+  const requirements = [`Initial Project: ${getProjectTypeName(projectDetailsInjected.value.type)}`];
+  
+  // Add other requirements if they exist
+  if (answers.length > 0) {
+    answers.forEach((answer, index) => {
+      if (index === 1) return; // Skip features answer
+      const prefix = index === 0 ? 'Purpose: ' : 
+                    index === 2 ? 'Auth: ' :
+                    index === 3 ? 'UI: ' : 'APIs: ';
+      requirements.push(prefix + answer);
+    });
+  }
   
   return {
-    type: getProjectTypeName(projectDetails.value.type),
-    features,
-    requirements
+    type: projectDetailsInjected.value.type,
+    features: answers.length > 1 ? answers[1].split(',').map((f: string) => f.trim()) : [],
+    requirements: requirements
   };
 });
 
@@ -187,6 +201,8 @@ const getProjectIcon = (typeId: string) => {
 
 // Dynamic deployment options based on project type
 const getDeploymentOptions = () => {
+  console.log('Getting deployment options for project type:', projectDetailsInjected?.value?.type);
+
   const allDeploymentOptions: DeploymentOption[] = [
     {
       name: 'Vercel',
@@ -254,9 +270,9 @@ const getDeploymentOptions = () => {
   ];
 
   // Filter options based on project type
-  if (projectDetails?.value?.type) {
+  if (projectDetailsInjected?.value?.type) {
     return allDeploymentOptions.filter(option => 
-      option.suitableFor.includes(projectDetails.value.type)
+      option.suitableFor.includes(projectDetailsInjected.value.type)
     );
   }
   
@@ -268,7 +284,7 @@ const selectDeployment = (option: DeploymentOption) => {
 };
 
 // Reset selected deployment when project type changes
-watch(projectDetails, () => {
+watch(projectDetailsInjected, () => {
   selectedDeployment.value = null;
 }, { deep: true });
 </script>
