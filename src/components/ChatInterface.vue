@@ -107,7 +107,7 @@
   </template>
   
   <script setup lang="ts">
-  import { ref, onMounted, watch, nextTick } from 'vue';
+  import { ref, onMounted, watch, nextTick, provide, computed } from 'vue';
   import { Button } from '@/components/ui/button';
   import { Input } from '@/components/ui/input';
   import { RefreshCw, Send, Download, Copy } from 'lucide-vue-next';
@@ -216,8 +216,27 @@
     ]
   };
   
+  // Make these variables available to child components - change to provide refs directly
+  provide('selectedProjectType', selectedProjectType);
+  provide('userAnswers', userAnswers);
+
+  // Add a new project details object that has more specific information
+  const projectDetails = computed(() => {
+    if (!selectedProjectType.value) return null;
+    
+    return {
+      type: selectedProjectType.value,
+      name: projectTypes.find(t => t.id === selectedProjectType.value)?.name || '',
+      answers: userAnswers.value,
+      status: currentStep.value
+    };
+  });
+
+  // Provide this computed property to child components
+  provide('projectDetails', projectDetails);
+
   const welcomeMessage = {
-    content: "👋 Hi there! I'm your AI Developer Assistant. I can help you generate complete, structured projects based on your ideas. What kind of project would you like to create today?",
+    content: "👋 What kind of project would you like to create?",
     isUser: false,
     type: 'project-types'
   };
@@ -239,8 +258,35 @@
   }, { deep: true });
   
   const formatMessage = (text: string) => {
+    if (!text) return '';
+    
+    // First convert code blocks with syntax highlighting
+    let formattedText = text.replace(/```(\w*)\n([\s\S]*?)```/g, (match, language, code) => {
+      const langClass = language ? ` class="language-${language}"` : '';
+      return `<pre class="bg-muted p-3 rounded my-2 overflow-x-auto"><code${langClass}>${code}</code></pre>`;
+    });
+    
+    // Convert inline code
+    formattedText = formattedText.replace(/`([^`]+)`/g, '<code class="bg-muted px-1 rounded">$1</code>');
+    
+    // Convert bold text
+    formattedText = formattedText.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+    
+    // Convert italic text
+    formattedText = formattedText.replace(/\*([^*]+)\*/g, '<em>$1</em>');
+    
+    // Convert bullet points
+    formattedText = formattedText.replace(/^\s*[-*]\s+(.*)/gm, '<li>$1</li>');
+    formattedText = formattedText.replace(/<li>.*?<\/li>/gs, '<ul class="list-disc ml-4 my-2">$&</ul>');
+    
+    // Convert numbered lists
+    formattedText = formattedText.replace(/^\s*(\d+)\.\s+(.*)/gm, '<li>$2</li>');
+    formattedText = formattedText.replace(/<li>.*?<\/li>/gs, '<ol class="list-decimal ml-4 my-2">$&</ol>');
+    
     // Convert line breaks to <br> tags
-    return text.replace(/\n/g, '<br>');
+    formattedText = formattedText.replace(/\n/g, '<br>');
+    
+    return formattedText;
   };
 
   const sendMessage = async () => {

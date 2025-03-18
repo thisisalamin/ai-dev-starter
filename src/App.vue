@@ -7,12 +7,14 @@
       </div>
     </header>
     
-    <main class="flex-1 container mx-auto px-4 py-6 flex flex-col md:flex-row gap-6">
-      <div class="w-full md:w-3/4 flex flex-col">
-        <ChatInterface />
-      </div>
-      <div class="w-full md:w-1/4">
-        <ProjectInfo />
+    <main class="flex-1 container mx-auto px-4 py-6">
+      <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="md:col-span-2">
+          <ChatInterface />
+        </div>
+        <div class="md:col-span-1">
+          <ProjectInfo />
+        </div>
       </div>
     </main>
     
